@@ -23,9 +23,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       async authorize(credentials) {
         try {
-          console.log("Credentials authorize called with:", { email: credentials?.email });
-          if (!credentials?.email || !credentials?.password) return null;
+          console.log("Credentials authorize called with:", { 
+            email: credentials?.email,
+            hasPassword: !!credentials?.password 
+          });
           
+          if (!credentials?.email || !credentials?.password) {
+            console.log("Missing credentials");
+            return null;
+          }
+          
+          console.log("Making request to Django login endpoint");
           const res = await fetch("http://localhost:8000/api/auth/login/", {
             method: "POST",
             body: JSON.stringify({
@@ -38,20 +46,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
           });
 
+          console.log("Django login response status:", res.status);
           const data = await res.json();
-          console.log("Credentials auth response:", { status: res.status, data });
+          console.log("Django login response data:", data);
           
           if (!res.ok) {
+            console.error("Login failed:", data.error || "Authentication failed");
             throw new Error(data.error || "Authentication failed");
           }
 
           const email = credentials.email as string;
-          return {
+          const user = {
             id: email,
             email: email,
             name: email.split('@')[0],
             accessToken: data.access_token,
           };
+          console.log("Created user object:", { 
+            id: user.id,
+            email: user.email,
+            hasAccessToken: !!user.accessToken 
+          });
+          
+          return user;
         } catch (error) {
           console.error("Credentials auth error:", error);
           return null;
@@ -147,7 +164,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return token;
         }
 
-        if (account && user) {
+        // Handle social login (Google, Facebook)
+        if (account && user && account.provider && account.provider !== 'credentials') {
           console.log("Making social auth request to backend with:", {
             provider: account.provider,
             hasAccessToken: !!account.access_token,
@@ -156,8 +174,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             userEmail: user.email
           });
           
-          if (!account.provider || !account.access_token) {
-            throw new Error("Missing provider or access token");
+          if (!account.access_token) {
+            throw new Error("Missing access token for social login");
           }
 
           const res = await fetch("http://localhost:8000/api/auth/social/", {
@@ -208,8 +226,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           });
           return newToken;
         }
-        // For credentials login
-        if (user) {
+
+        // Handle credentials login
+        if (user && user.accessToken) {
           console.log("Processing credentials login in JWT callback with:", {
             userId: user.id,
             userEmail: user.email,
@@ -228,6 +247,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
           }
         }
+
         return token;
       } catch (error) {
         console.error("JWT callback error:", error);
