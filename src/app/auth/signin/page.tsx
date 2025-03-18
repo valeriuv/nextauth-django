@@ -12,7 +12,7 @@ export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/';
+  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
 
   const handleCredentialsSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
