@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from 'react';
-import { signIn } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { signIn, useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 export default function SignIn() {
@@ -10,9 +10,24 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+  const [isSignedIn, setIsSignedIn] = useState(false);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    console.log("SignIn Page - Session state changed:", { 
+      isSignedIn, 
+      hasSession: !!session,
+      sessionStatus: status,
+      sessionData: session 
+    });
+    
+    if (status === "authenticated" && session) {
+      console.log("SignIn Page - Session established, redirecting to dashboard");
+      window.location.href = '/dashboard';
+    }
+  }, [session, status, isSignedIn]);
 
   const handleCredentialsSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -20,7 +35,7 @@ export default function SignIn() {
     setError(null);
 
     try {
-      console.log("Attempting sign in with callbackUrl:", callbackUrl);
+      console.log("SignIn Page - Attempting sign in with:", { email, callbackUrl });
       const result = await signIn('credentials', {
         redirect: false,
         email,
@@ -28,17 +43,21 @@ export default function SignIn() {
         callbackUrl,
       });
 
-      console.log("Sign in result:", result);
+      console.log("SignIn Page - Sign in result:", result);
 
       if (result?.error) {
+        console.error("SignIn Page - Sign in error:", result.error);
         setError(result.error);
-      } else if (result?.url) {
-        console.log("Redirecting to:", result.url);
-        router.push(result.url);
+      } else if (result?.ok) {
+        console.log("SignIn Page - Sign in successful, waiting for session...");
+        setIsSignedIn(true);
+      } else {
+        console.error("SignIn Page - Unexpected authentication response");
+        setError("Unexpected authentication response");
       }
     } catch (error) {
+      console.error("SignIn Page - Unexpected error:", error);
       setError('An unexpected error occurred');
-      console.error('Sign in error:', error);
     } finally {
       setIsLoading(false);
     }
