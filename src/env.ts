@@ -1,0 +1,8 @@
+export const env = {
+  NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+  NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000',
+  NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.AUTH_GOOGLE_ID,
+  GOOGLE_CLIENT_SECRET: process.env.AUTH_GOOGLE_SECRET,
+  NEXT_PUBLIC_FACEBOOK_CLIENT_ID: process.env.AUTH_FACEBOOK_ID,
+  FACEBOOK_CLIENT_SECRET: process.env.AUTH_FACEBOOK_SECRET,
+} as const; 
